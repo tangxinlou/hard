@@ -1,0 +1,7 @@
+.text
+.global _start
+_start:
+	程序体：在led1的基础上只修改了寄存器的地址
+halt：
+	b halt
+功能：第二个灯亮了

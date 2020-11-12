@@ -1,0 +1,18 @@
+自己写一个汇编程序写汇编的格式如下
+.text
+.global _start
+
+
+_start:
+
+程序体
+ldr r1 , =addr //读地址，地址赋值，把addr赋值给r1
+ldr r1 , [r0]  //读内存，不内存地址r0的数值读入r1寄存器
+str r1 , [r0]  //写内存，把r1写到r0地址处
+halt:
+	b halt//死循环
+编译命令：
+		arm-linux-gcc -c -o led_on.o led_on.S   //编译
+		arm-linux-ld -Ttext 0 led_on.o -o led_on.elf //链接
+		arm-linux-objcopy -O binary -S led_on.elf led_on.bin//生成bin文件
+		arm-linux-objdump -D led_on.elf >led_on.dis//反编译

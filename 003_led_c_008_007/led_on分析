@@ -1,0 +1,67 @@
+
+功能：实现点灯程序的c实现
+	自己写一个汇编程序start.S
+	自己写一个c程序led.c
+	在start.S中调用led.c中的main函数
+start.S:
+
+.text
+.global _start
+
+_start:
+	//设置栈，c调用需要栈，设置sp寄存器的值
+	ldr sp ， =4096
+	//调用main函数
+	bl main
+
+halt：
+	b halt
+
+
+led.c
+	//在主函数中设置两个无符号的int型指针，使用指针直接赋值
+	unsigned int *gpfcon = (unsigned int *)0x56000050;
+	*gpfcon = 0x100;
+
+反编译分析：
+
+led.elf:     file format elf32-littlearm //说明这个文件是elf32位格式的文件
+
+Disassembly of section .text://代码段
+地址      机器码     汇编代码
+00000000 <_start>://0地址，start标号
+   0:	e3a0da01 	mov	sp, #4096	; 0x1000 //设置栈
+   4:	eb000000 	bl	c <main>// 调用main函数，直接跳转到main标号地址处执行
+
+00000008 <halt>:
+   8:	eafffffe 	b	8 <halt>
+
+0000000c <main>:
+   c:	e1a0c00d 	mov	ip, sp //保存栈
+  10:	e92dd800 	stmdb	sp!, {fp, ip, lr, pc}//保存寄存器的值到栈
+  14:	e24cb004 	sub	fp, ip, #4	; 0x4
+  18:	e24dd008 	sub	sp, sp, #8	; 0x8
+  1c:	e3a03456 	mov	r3, #1442840576	; 0x56000000
+  20:	e2833050 	add	r3, r3, #80	; 0x50
+  24:	e50b3010 	str	r3, [fp, #-16]
+  28:	e3a03456 	mov	r3, #1442840576	; 0x56000000
+  2c:	e2833054 	add	r3, r3, #84	; 0x54
+  30:	e50b3014 	str	r3, [fp, #-20]
+  34:	e51b2010 	ldr	r2, [fp, #-16]
+  38:	e3a03c01 	mov	r3, #256	; 0x100
+  3c:	e5823000 	str	r3, [r2]
+  40:	e51b2014 	ldr	r2, [fp, #-20]
+  44:	e3a03000 	mov	r3, #0	; 0x0
+  48:	e5823000 	str	r3, [r2]
+  4c:	e3a03000 	mov	r3, #0	; 0x0 //返回值
+  50:	e1a00003 	mov	r0, r3
+  54:	e24bd00c 	sub	sp, fp, #12	; 0xc //恢复栈
+  58:	e89da800 	ldmia	sp, {fp, sp, pc}//恢复寄存器，把保存的lr值传給pc
+Disassembly of section .comment:
+
+00000000 <.comment>:   //注释
+   0:	43434700 	cmpmi	r3, #0	; 0x0
+   4:	4728203a 	undefined
+   8:	2029554e 	eorcs	r5, r9, lr, asr #10
+   c:	2e342e33 	mrccs	14, 1, r2, cr4, cr3, {1}
+  10:	Address 0x10 is out of bounds.

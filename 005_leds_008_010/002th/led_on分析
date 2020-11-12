@@ -1,0 +1,57 @@
+
+功能：实现点灯程序的c实现，通过外部传参数实现点亮的切换,本来闪动一次后死循环，但是发现重复
+闪动，原来有个看门狗，所以需要关掉看门狗，同时将栈设置好
+	自己写一个汇编程序start.S
+	自己写一个c程序led.c
+	自己建立一个引脚.h 文件，里面把引脚的指针通过宏控设置简洁
+	在start.S中调用led.c中的led_on函数，和delay函数，并且传入参数
+start.S: 关掉看门狗，自动判断启动方式设置栈
+
+.text
+.global _start
+
+_start:
+	//关掉看门狗
+	ldr r0 , =0x53000000
+	ldr r1 , #0
+	str r1 , [r0]
+	
+	//判断启动方式，设置栈
+	ldr r1 , #0
+	ldr r0 , [r1] //备份0地址的值
+	str r1 , [r1] //写0地址
+	ldr r2 , [r1] //读0地址
+    cmp r2 , r1   //比较两个值
+	ldr sp , =0x40000000 + 4096
+	moveq  sp , #4096 //相等设置sp
+	streq  r0 , [r1] //恢复原来的值
+	
+	//调用main函数
+	ldr r0 , #4
+	bl main
+
+halt：
+	b halt
+
+
+led.c  延迟函数，循环点亮灯
+	
+	void delay（int d）；
+	不断的减减延迟
+	int led_on(int swich);
+	
+	//在主函数中设置两个无符号的int型指针，使用指针直接赋值
+	unsigned int *gpfcon = (unsigned int *)0x56000050;
+	*pGPFCON &= ~((3<<8) | (3<<10) | (3<<12));//清相应的位
+	*pGPFCON |=  ((1<<8) | (1<<10) | (1<<12));//置位
+
+
+s3c2440.h:
+#ifndef  __s3c2440_soc_h
+#define  __s3c2440_soc_h
+
+#define __REG(X)    *((volatile unsigned  int * ) (x)) //加volatile防止编译器优化
+#define GPFCON    __REG(0x56000050)
+
+	
+

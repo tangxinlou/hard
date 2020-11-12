@@ -1,0 +1,110 @@
+
+功能：设置uart，使用串口传送一个字节的信息
+	自己写一个汇编程序start.S
+	自己写一个c程序led.c
+	自己建立一个引脚.h 文件，里面把引脚的指针通过宏控设置简洁
+	建立一个main函数，可以控制发送字符串和接受字符
+	建立一个uart.c文件，包括初始化串口，发送和接收一个字节，另外发送一个字符串
+	建立一个uart.h文件把uart.c文件的函数申明包含
+start.S: 关掉看门狗，自动判断启动方式设置栈 调用main函数 ，死循环
+
+.text
+.global _start
+
+_start:
+	//关掉看门狗
+	ldr r0 , =0x53000000
+	ldr r1 , #0
+	str r1 , [r0]
+	//设置pll lock time
+	ldr r0 , =0x4c000000
+	ldr r1 , =0xffffffff
+	str r1 , [r0]
+
+	//设置clkdivn 设置分频器使得fclk hclk pclk 的周期比例为1:4:8
+	ldr r0 , =0x4c000014
+	ldr r1 , #5
+	str r1 , [r0]
+	
+	//使用协处理命令cpu置异步工作模式，不然就算设置了mpll，也会工作在hclk频率
+	mrc p15,0,r0,c1,c0,0
+	orr r0,r0,#0xc0000000
+	mcr p15,0,r0,c1,c0,0
+	//设置mpll设置fclk
+	ldr r0 , =0x4c000004
+	ldr r1, =(92<<12)|(1<<4)|(1<<0)
+	str r1, [r0]
+	//判断启动方式，设置栈
+	ldr r1 , #0
+	ldr r0 , [r1] //备份0地址的值
+	str r1 , [r1] //写0地址
+	ldr r2 , [r1] //读0地址
+    cmp r2 , r1   //比较两个值
+	ldr sp , =0x40000000 + 4096
+	moveq  sp , #4096 //相等设置sp
+	streq  r0 , [r1] //恢复原来的值
+	
+	//调用main函数
+	ldr r0 , #4
+	bl main
+
+halt：
+	b halt
+
+
+key_led.c  延迟函数，设置按键和灯的引脚，通过按键的键值，点亮灯
+	
+	void delay（int d）；//无返回值
+	不断的减减延迟
+	int main(void);//返回0
+	
+	//直接使用指针清位和置位
+	volatile unsigned int *gpfcon = (volatile unsigned int *)0x56000050;
+	*pGPFCON &= ~((3<<8) | (3<<10) | (3<<12));//清相应的位
+	*pGPFCON |=  ((1<<8) | (1<<10) | (1<<12));//置位
+
+	if(val & (1<<0))//判断第0位是否为1,1是松开，0是按下
+
+
+s3c2440.h: 使用相关宏，将一个字符串代表读指针操作
+#ifndef  __s3c2440_soc_h
+#define  __s3c2440_soc_h
+
+#define __REG(X)    *((volatile unsigned  int * ) (x)) //加volatile防止编译器优化
+#define __REG_byte(X)    *((volatile unsigned  char * ) (x))//一个字节
+#define GPFCON    __REG(0x56000050)
+
+uart.c :初始化一个串口，书写发送和接收一个字节的程序，以及发送一个字符串的函数
+
+	void uart_init();//无返回值
+	//配置两个串口的gpio用于串口，使能两个引脚的上拉，因为两个引脚需要保持高电平
+	GPFCON GPFUP
+	//设置串口的波特率，时钟频率，串口的工作模式
+	UCON UBRDIV0
+	//设置数据格式
+	ULCON ，设置成8个数据位，一个停止位
+	
+	int putchar(int c);无返回值
+	查询UTRSTAT寄存器的值是否为为0表示可以发送，往UTXH寄存器写值
+	int getchar(void);返回寄存器的值
+	查询UTRSTAT寄存器的值是否为为0，为0表示有值，可以接收数值（一个字节）
+	int puts(const char *s);无返回值
+	查询字符指针是否有值，有值重复发送字符 
+
+uart.h:包含uart文件中的函数声明
+#ifndef __UART_H
+#define __UART_H
+
+void uart_init();
+#endif
+
+
+
+
+
+
+	
+
+
+
+0,
